@@ -1,0 +1,29 @@
+---
+- name: Build an image with the docker_image module
+  hosts: localhost
+  vars:
+    container_count: 4
+  tasks:
+    - name: upload the site directory to the docker host
+      synchronize: src=site dest=/tmp
+
+    - name: Build an image and push it to a private repo
+      community.docker.docker_image:
+        build:
+          path: ./site
+        name: built-by-ansible
+        tag: v1
+        source: build
+    
+    - name: Start container
+      docker_container:
+        name: "hello_{{ item }}"
+        image: built-by-ansible:v1
+      with_sequence: count={{ container_count }}
+
+    - name: Get logs of 1 container
+      command: docker logs hello_1
+      register: output_logs
+
+    - debug:
+        var: output_logs.stdout_lines
